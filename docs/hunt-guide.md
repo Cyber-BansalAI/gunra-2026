@@ -191,7 +191,9 @@ These are drawn from the advisory's mitigations. Read the advisory for the full 
 
 Bring the log lines to your IT person first. If you want a second pair of eyes,
 [SOC-Lite by BansalAI](https://cyber.bansalai.com/?ref=github) offers a free 20-minute
-[visibility check](https://cyber.bansalai.com/?ref=github#book).
+[visibility check](https://cyber.bansalai.com/?ref=github#book). For the business-owner version of this page, with four
+questions to ask your IT person, read
+[Gunra Ransomware Gets In Through the Firewall: What to Ask Your IT Person](https://blog.bansalai.com/news/gunra-ransomware-firewall-vpn-backups/?ref=github).
 
 ## Source for this guide
 

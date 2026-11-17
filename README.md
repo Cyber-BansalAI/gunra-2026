@@ -14,6 +14,10 @@ found.
 
 This repository copies **those indicators** (with credit) and adds a short guide to checking your own systems for them.
 
+**Not technical? Start with the plain-language version:**
+[Gunra Ransomware Gets In Through the Firewall: What to Ask Your IT Person](https://blog.bansalai.com/news/gunra-ransomware-firewall-vpn-backups/?ref=github)
+on the SOC-Lite blog. It gives four questions to put to your IT person or provider.
+
 ## What is in here
 
 | File | What |
