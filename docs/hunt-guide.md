@@ -1,6 +1,6 @@
 # Hunt guide: did Gunra get in, and did it touch our backups?
 
-As of **2026-11-16**. Read [DISCLAIMER.md](../DISCLAIMER.md) first. We have not tested these commands on your systems.
+As of **2026-11-16** (event-log window and Linux checks updated 2026-11-19). Read [DISCLAIMER.md](../DISCLAIMER.md) first. We have not tested these commands on your systems.
 Run them yourself, on a copy of the logs if you can, and adjust paths to your setup. Nothing in this package runs
 anything for you, and every command shown only reads.
 
@@ -89,23 +89,76 @@ How to read it:
 ## 4. Accounts and sign-ins
 
 The advisory says the group stole password data from domain controllers and then moved between systems with those
-passwords, and by remote desktop. On a Windows server or domain controller these read-only commands show the last 30 days
-of new accounts and of people added to administrator groups:
+passwords, and by remote desktop. On a Windows server or domain controller these read-only commands show new accounts and
+people added to administrator groups from the start of your window in section 0 (April 2025):
 
 ```
-Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4720; StartTime=(Get-Date).AddDays(-30)} | Select-Object TimeCreated, Message
-Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4728,4732,4756; StartTime=(Get-Date).AddDays(-30)} | Select-Object TimeCreated, Message
+$since = Get-Date '2025-04-01'
+Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4720; StartTime=$since} | Select-Object TimeCreated, Message
+Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4728,4732,4756; StartTime=$since} | Select-Object TimeCreated, Message
 ```
 
 Remote Desktop sign-ins (logon type 10) from addresses you do not recognise, especially at night, are also worth a
 look:
 
 ```
-Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4624; StartTime=(Get-Date).AddDays(-30)} | Where-Object { $_.Message -match 'Logon Type:\s+10' } | Select-Object TimeCreated, Message
+$since = Get-Date '2025-04-01'
+Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4624; StartTime=$since} | Where-Object { $_.Message -match 'Logon Type:\s+10' } | Select-Object TimeCreated, Message
+```
+
+**These commands can only see as far back as the server's log goes.** Windows keeps as much history as the log's size
+allows, often only a few weeks. This command shows the oldest record the server still has. If it is newer than the start
+of your window, say so in your notes (section 0): you cannot rule anything out for the earlier period. A search over many
+months can also take a long time on a busy server, so run it on a copy of the log if you can.
+
+```
+Get-WinEvent -LogName Security -Oldest -MaxEvents 1 | Select-Object TimeCreated
 ```
 
 These records need Windows auditing turned on. If they are empty, that is itself a finding: you may not be recording
 what you need.
+
+## 4b. Linux servers
+
+The advisory says the group also has a Linux version of its program, which names locked files with the ending **.GNRA**,
+and that the group clears command history and deletes logs. These read-only checks are for a Linux server. Paths differ
+between Linux versions, so adjust them, and run them as an administrator.
+
+Look for locked files and ransom notes. This stays on one disk; repeat it with the mount point of each data disk in place
+of `/`:
+
+```
+find / -xdev \( -name '*.GNRA' -o -name 'R3ADM3.txt' -o -name 'R34DM3.txt' \)
+```
+
+If anything turns up, do not delete, move or open-and-save it. Keep it exactly as it is and go to section 9, step 4.
+
+Look at who signed in. The advisory says the group worked mostly between 10:00 p.m. and 6:00 a.m. and used SSH access to
+reach servers. One of the two log files below exists, depending on the Linux version:
+
+```
+last -F -n 50
+grep 'Accepted' /var/log/auth.log
+grep 'Accepted' /var/log/secure
+```
+
+Look at who has an account, and at the history and log files. A history file that is empty or very small on an account
+used every day, or a log that stops suddenly, matches what the advisory says the group does. It is a question for whoever
+runs the server, not proof:
+
+```
+getent passwd
+getent group sudo wheel
+ls -l --time-style=long-iso /root/.bash_history /home/*/.bash_history
+ls -l --time-style=long-iso /var/log
+```
+
+Look at connections the server has open. The advisory says the group downloaded an SSH tunnelling tool to keep
+connections open between systems. A program connecting out to an address nobody can explain is worth a question:
+
+```
+ss -tnp state established
+```
 
 ## 5. Backups
 
@@ -115,11 +168,13 @@ archived data at both the main data center and the disaster-recovery site, befor
 - **Backup storage and software.** Check its own admin log or ask your provider whether backups were deleted, had their
   settings changed or had their schedules changed by someone nobody remembers.
 - **Both locations.** If your backups are in two places, check both. The advisory describes damage at both.
-- **Volume Shadow Copy.** This command lists the service stopping or starting in the last 30 days. The service also
-  stops by itself when idle, so a stop on its own proves little. Look for it alongside other signs:
+- **Volume Shadow Copy.** This command lists the service stopping or starting since the start of your window. The
+  System log may not go back that far either (see the oldest-record check in section 4, with `-LogName System`). The
+  service also stops by itself when idle, so a stop on its own proves little. Look for it alongside other signs:
 
 ```
-Get-WinEvent -FilterHashtable @{LogName='System'; Id=7036; StartTime=(Get-Date).AddDays(-30)} | Where-Object { $_.Message -like '*Volume Shadow Copy*' } | Select-Object TimeCreated, Message
+$since = Get-Date '2025-04-01'
+Get-WinEvent -FilterHashtable @{LogName='System'; Id=7036; StartTime=$since} | Where-Object { $_.Message -like '*Volume Shadow Copy*' } | Select-Object TimeCreated, Message
 ```
 
 - **The test that matters.** Do you have a backup copy that is **offline or cannot be changed**, and has someone
@@ -199,4 +254,5 @@ questions to ask your IT person, read
 
 The joint advisory AA26-222A by the FBI, CISA, the Department of Defense Cyber Crime Center, the National Security
 Agency, the U.S. Secret Service and South Korea's National Police Agency (full credit and link in
-[CREDITS.md](../CREDITS.md)). Windows event numbers are standard Windows records and are not from the advisory.
+[CREDITS.md](../CREDITS.md)). Windows event numbers and the Linux commands are standard system tools and records and are
+not from the advisory.
